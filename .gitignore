@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+events.log
+.demo-logs/
+gh-repo-template/

@@ -1,0 +1,4 @@
+{
+  "description": "Known prompt-injection and exfiltration payloads. Used by the embedding-similarity layer of the detector.",
+  "payloads": []
+}

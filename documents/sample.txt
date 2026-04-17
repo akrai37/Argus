@@ -1,0 +1,2 @@
+Hello from documents/sample.txt.
+This is a benign fixture used by scratch/test_mcp.py to verify the MCP server works end-to-end.
