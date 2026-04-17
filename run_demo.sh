@@ -142,6 +142,22 @@ echo "[run_demo] exfil attack -> http://127.0.0.1:$PROXY_PORT/mcp"
 uv run python scratch/attack_exfil.py "http://127.0.0.1:$PROXY_PORT/mcp" || true
 
 echo
+pause "now the clever one — a semantic attack only the LLM judge can catch"
+
+# --- scenario 3b: LLM-judge-only semantic attack ----------------------------
+banner "Scenario 3b — semantic attack (caught only by the LLM judge)"
+
+echo "This doc has NO regex hits — no AWS keys, no 'ignore prior instructions',"
+echo "no suspicious shell patterns. Just a polite request to forward company"
+echo "data to an external email. Regex allows it; the LLM judge catches it."
+echo "Watch the dashboard — this will show the AMBER 'llm' layer badge."
+echo
+pause "run the agent against hr_handbook.md through Argus"
+
+echo "[run_demo] victim_agent -> hr_handbook.md (via Argus)"
+DOCUMENT=hr_handbook.md uv run python victim_agent.py || true
+
+echo
 pause "next: the real-world scenario — a coding assistant reading a poisoned CLAUDE.md from GitHub"
 
 # --- scenario 4: poisoned GitHub CLAUDE.md (Claude Code CVE pattern) -------

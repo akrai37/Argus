@@ -6,3 +6,7 @@ __pycache__/
 events.log
 .demo-logs/
 gh-repo-template/
+*.jpeg
+*.jpg
+*.png
+*.heic

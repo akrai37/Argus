@@ -22,6 +22,7 @@ from dataclasses import dataclass, asdict
 from typing import Literal
 
 import anthropic
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,6 +34,20 @@ Layer = Literal["regex", "embedding", "llm", "identity"]
 JUDGE_MODEL = os.environ.get("ARGUS_JUDGE_MODEL", "claude-sonnet-4-6")
 JUDGE_MAX_TOKENS = 400
 JUDGE_MAX_INPUT_CHARS = 6000  # cap input to control latency and cost
+
+# Optional: point the LLM judge at any OpenAI-compatible endpoint
+# (vLLM, Ollama, LM Studio, TGI, LocalAI, AWS Bedrock gateway, ...).
+# When set, Argus speaks OpenAI protocol to this URL instead of calling
+# Anthropic. This is the "run fully on-prem / air-gapped" mode.
+#
+#   unset (default)                      → Claude via Anthropic cloud
+#   ARGUS_JUDGE_BASE_URL=http://h200:8000/v1
+#   ARGUS_JUDGE_API_KEY=...               (optional; many local servers ignore auth)
+#
+# The model name still comes from ARGUS_JUDGE_MODEL (e.g. "qwen2.5-7b-instruct",
+# "llama-3.1-8b-instruct", "mistral-7b-instruct").
+JUDGE_BASE_URL = os.environ.get("ARGUS_JUDGE_BASE_URL")
+JUDGE_API_KEY = os.environ.get("ARGUS_JUDGE_API_KEY", "sk-no-auth-needed")
 
 
 @dataclass
@@ -157,29 +172,70 @@ def _get_client() -> anthropic.Anthropic:
     return _client
 
 
+def _parse_judge_json(text: str) -> tuple[float, str]:
+    """Extract {score, reason} from a model reply; tolerate markdown fences."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```[a-zA-Z]*\n", "", text).rstrip("`").rstrip()
+    data = json.loads(text)
+    score = float(data.get("score", 0.0))
+    reason = str(data.get("reason", "no reason given"))
+    return score, reason
+
+
+def _llm_check_anthropic(content: str, direction: Direction) -> Verdict:
+    """Default judge path: Claude via Anthropic cloud API."""
+    resp = _get_client().messages.create(
+        model=JUDGE_MODEL,
+        max_tokens=JUDGE_MAX_TOKENS,
+        system=_JUDGE_SYSTEM,
+        messages=[{"role": "user", "content": _judge_prompt(content, direction)}],
+    )
+    text = "".join(b.text for b in resp.content if b.type == "text")
+    score, reason = _parse_judge_json(text)
+    score = max(0.0, min(1.0, score))
+    return Verdict(score=score, action=_score_to_action(score),
+                   reason=reason, layer="llm")
+
+
+def _llm_check_openai_compat(content: str, direction: Direction) -> Verdict:
+    """Alt judge path: any OpenAI-compatible endpoint (vLLM / Ollama / TGI / ...).
+
+    Used when ARGUS_JUDGE_BASE_URL is set. Enables fully-on-prem / air-gapped
+    deployment where the LLM judge runs on the customer's own infrastructure.
+    """
+    assert JUDGE_BASE_URL is not None
+    url = JUDGE_BASE_URL.rstrip("/") + "/chat/completions"
+    headers = {"Authorization": f"Bearer {JUDGE_API_KEY}"}
+    payload = {
+        "model": JUDGE_MODEL,
+        "max_tokens": JUDGE_MAX_TOKENS,
+        "temperature": 0,
+        "messages": [
+            {"role": "system", "content": _JUDGE_SYSTEM},
+            {"role": "user", "content": _judge_prompt(content, direction)},
+        ],
+    }
+    resp = httpx.post(url, json=payload, headers=headers, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+    text = data["choices"][0]["message"]["content"]
+    score, reason = _parse_judge_json(text)
+    score = max(0.0, min(1.0, score))
+    return Verdict(score=score, action=_score_to_action(score),
+                   reason=reason, layer="llm")
+
+
 def _llm_check(content: str, direction: Direction) -> Verdict:
     try:
-        resp = _get_client().messages.create(
-            model=JUDGE_MODEL,
-            max_tokens=JUDGE_MAX_TOKENS,
-            system=_JUDGE_SYSTEM,
-            messages=[{"role": "user", "content": _judge_prompt(content, direction)}],
-        )
-        text = "".join(b.text for b in resp.content if b.type == "text").strip()
-        # Strip possible markdown fence
-        if text.startswith("```"):
-            text = re.sub(r"^```[a-zA-Z]*\n", "", text).rstrip("`").rstrip()
-        data = json.loads(text)
-        score = float(data.get("score", 0.0))
-        reason = str(data.get("reason", "no reason given"))
+        if JUDGE_BASE_URL:
+            return _llm_check_openai_compat(content, direction)
+        return _llm_check_anthropic(content, direction)
     except Exception as exc:
         # On judge error, fail open but log the reason. Detector failures
         # should never block legitimate traffic.
         return Verdict(score=0.0, action="allow",
                        reason=f"llm_judge_error: {exc}", layer="llm")
-    score = max(0.0, min(1.0, score))
-    return Verdict(score=score, action=_score_to_action(score),
-                   reason=reason, layer="llm")
 
 
 # -----------------------------------------------------------------------------

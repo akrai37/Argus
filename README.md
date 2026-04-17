@@ -139,6 +139,8 @@ colour-coded `coding-bot` row and the layer badge that blocked.
 | `ARGUS_LLM_RESPONSES` | `1` | run LLM judge on inbound responses |
 | `ARGUS_LLM_CALLS` | `0` | run LLM judge on outbound calls (off by default to keep latency predictable) |
 | `ARGUS_JUDGE_MODEL` | `claude-sonnet-4-6` | model used by the LLM judge |
+| `ARGUS_JUDGE_BASE_URL` | — | if set, route judge calls to this OpenAI-compatible endpoint (vLLM, Ollama, TGI, LocalAI). Unsets the Anthropic cloud dependency for air-gapped deployments. |
+| `ARGUS_JUDGE_API_KEY` | `sk-no-auth-needed` | optional bearer token for the OpenAI-compatible endpoint |
 | `ARGUS_GH_NO_CACHE` | — | set to `1` to bypass the GitHub fetch cache |
 | `ARGUS_JWT_SECRET` | demo-value | HMAC secret for the identity layer (rotate for real deployments) |
 | `ARGUS_URL` | `http://127.0.0.1:8000/mcp` | endpoint `victim_agent.py` connects to |
