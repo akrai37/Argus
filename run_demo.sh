@@ -98,7 +98,7 @@ if command -v open >/dev/null 2>&1; then
 fi
 
 echo
-pause "show the dashboard to the judges, then hit enter to begin the demo"
+pause "Dashboard is live. Press Enter to begin."
 
 # --- scenario 1: poisoned response -------------------------------------------
 banner "Scenario 1 — poisoned document reaches the agent (Argus OFF)"
@@ -107,13 +107,13 @@ echo "An onboarding doc we'll show the agent contains fake AWS credentials."
 echo "This is what happens TODAY, with no firewall: the credentials end up in"
 echo "the agent's context, where they can be logged, leaked, or surfaced."
 echo
-pause "point the agent directly at the MCP server (bypassing Argus)"
+pause "Press Enter to run the agent against the MCP server directly (Argus bypassed)."
 
 echo "[run_demo] victim_agent -> http://127.0.0.1:$SERVER_PORT/mcp"
 ARGUS_URL="http://127.0.0.1:$SERVER_PORT/mcp" uv run python victim_agent.py || true
 
 echo
-pause "enable Argus and re-run the same attack"
+pause "Press Enter to re-run the same request through Argus."
 
 # --- scenario 2: same attack, through Argus ----------------------------------
 banner "Scenario 2 — same attack, through Argus"
@@ -121,13 +121,13 @@ banner "Scenario 2 — same attack, through Argus"
 echo "Now the agent talks to Argus. The document is unchanged, the agent is"
 echo "unchanged. Watch the dashboard."
 echo
-pause "run the agent through Argus"
+pause "Press Enter to start the agent."
 
 echo "[run_demo] victim_agent -> http://127.0.0.1:$PROXY_PORT/mcp"
 uv run python victim_agent.py || true
 
 echo
-pause "show the differentiator next — outbound-call detection"
+pause "Press Enter to continue to outbound-call inspection."
 
 # --- scenario 3: outbound exfil call -----------------------------------------
 banner "Scenario 3 — malicious outbound call (exfil via tool args)"
@@ -136,13 +136,13 @@ echo "Argus inspects both directions. Even if an agent is compromised and"
 echo "tries to call shell_exec with an exfiltration command, Argus catches"
 echo "it BEFORE it reaches the real tool."
 echo
-pause "run the attack through Argus"
+pause "Press Enter to attempt an outbound credential-exfiltration call."
 
 echo "[run_demo] exfil attack -> http://127.0.0.1:$PROXY_PORT/mcp"
 uv run python scratch/attack_exfil.py "http://127.0.0.1:$PROXY_PORT/mcp" || true
 
 echo
-pause "now the clever one — a semantic attack only the LLM judge can catch"
+pause "Press Enter to continue to the semantic-attack scenario (LLM-judge layer)."
 
 # --- scenario 3b: LLM-judge-only semantic attack ----------------------------
 banner "Scenario 3b — semantic attack (caught only by the LLM judge)"
@@ -152,13 +152,13 @@ echo "no suspicious shell patterns. Just a polite request to forward company"
 echo "data to an external email. Regex allows it; the LLM judge catches it."
 echo "Watch the dashboard — this will show the AMBER 'llm' layer badge."
 echo
-pause "run the agent against hr_handbook.md through Argus"
+pause "Press Enter to run the agent against hr_handbook.md through Argus."
 
 echo "[run_demo] victim_agent -> hr_handbook.md (via Argus)"
 DOCUMENT=hr_handbook.md uv run python victim_agent.py || true
 
 echo
-pause "next: the real-world scenario — a coding assistant reading a poisoned CLAUDE.md from GitHub"
+pause "Press Enter to continue to the GitHub scenario (Claude Code CVE pattern)."
 
 # --- scenario 4: poisoned GitHub CLAUDE.md (Claude Code CVE pattern) -------
 banner "Scenario 4 — poisoned GitHub repo (Claude Code CVE pattern)"
@@ -168,9 +168,9 @@ echo "on March 31, 2026. A coding assistant (scoped identity: coding-bot)"
 echo "fetches CLAUDE.md from a public repo on GitHub and tries to follow"
 echo "its setup instructions."
 echo
-echo "Repo: https://github.com/$GH_REPO  (judges can open this on their phones)"
+echo "Repo: https://github.com/$GH_REPO  (publicly accessible for verification)"
 echo
-pause "run the coding agent against the poisoned repo through Argus"
+pause "Press Enter to run the coding agent against the public GitHub repo."
 
 echo "[run_demo] coding-bot -> $GH_REPO/CLAUDE.md (via Argus)"
 AGENT_ROLE=coding AGENT_ID=coding-bot \
@@ -178,7 +178,7 @@ AGENT_ROLE=coding AGENT_ID=coding-bot \
   uv run python victim_agent.py || true
 
 echo
-pause "show the identity guard: same scenario, but with a non-privileged agent"
+pause "Press Enter to retry the same request with a non-privileged identity (identity-layer demo)."
 
 echo "[run_demo] onboarding-bot -> blocked at identity layer (no fetch_github_file scope)"
 AGENT_ROLE=coding AGENT_ID=onboarding-bot \
