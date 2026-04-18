@@ -8,6 +8,8 @@ Built for the A10 Networks Hackathon (April 17-18, 2026, Track 2).
 
 > *"Argus had a hundred eyes. Ours has one for every tool call."*
 
+![Argus dashboard streaming live tool-call decisions, with per-agent rows and the layer badge showing what caught each block](images/Argus_dashboard.png)
+
 ## Quickstart
 
 ```bash

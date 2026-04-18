@@ -10,3 +10,4 @@ gh-repo-template/
 *.jpg
 *.png
 *.heic
+!images/*.png
